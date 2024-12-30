@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.mypy_cache/
+report/figs/
+*.aux
+*.bcf
+*.fdb_latexmk
+*.fls
+*.log
+*.run.xml
+*.synctex.gz

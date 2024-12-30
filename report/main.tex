@@ -1,0 +1,40 @@
+\documentclass[12pt]{article}
+
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{float}
+\usepackage[parfill]{parskip}
+
+\usepackage[backend=biber, style=numeric-comp, sorting=none]{biblatex}
+\addbibresource{refs.bib}
+
+\title{MFC CDT Probability and Statistics Coursework}
+\author{Leo Collins}
+
+\begin{document}
+
+\maketitle
+
+\section{Model}
+
+The model will be a two-dimensional linear Gaussian state space model
+
+\begin{equation}
+    \mathbf{x}_{t} = \mathbf{A} \mathbf{x}_{t-1} + \mathbf{w}_{t}
+\end{equation}
+where $\mathbf{x}_{t} \in \mathbb{R}^{2}$ is the state vector at time $t$, $\mathbf{A}$ is the state transition matrix, and $\mathbf{w}_{t} \sim \mathcal{N}(\mathbf{0}, \mathbf{Q})$ is the process noise at time $t$ with covariance matrix $\mathbf{Q}$.
+At each time $t$ the state is observed according to
+\begin{equation}
+    \mathbf{y}_{t} = \mathbf{C} \mathbf{x}_{t} + \mathbf{v}_{t}
+\end{equation}
+where $\mathbf{y}_{t} \in \mathbb{R}^{2}$ is the observation vector at time $t$, $\mathbf{C}$ is the observation matrix, and $\mathbf{v}_{t} \sim \mathcal{N}(\mathbf{0}, \mathbf{R})$ is the observation noise at time $t$ with covariance matrix $\mathbf{R}$.
+\section{Kalman Filter}
+
+\section{Particle Filter}
+
+\section{Results}
+
+\end{document}
