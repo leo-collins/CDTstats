@@ -9,3 +9,6 @@ report/figs/
 *.log
 *.run.xml
 *.synctex.gz
+report/_minted/
+*.bbl
+*.blg

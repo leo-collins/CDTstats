@@ -2,28 +2,10 @@ import numpy as np
 from multiprocessing import Pool
 
 def kalman_filter(y, A, Q, C, R, mu_0, Sigma_0):
-    """
-    Applies the Kalman filter to a sequence of observations.
-
-    Parameters:
-    y (np.ndarray): Observation sequence of shape (T, 2), where T is the number of time steps.
-    A (np.ndarray): State transition matrix
-    Q (np.ndarray): Process noise covariance matrix
-    C (np.ndarray): Observation matrix
-    R (np.ndarray): Observation noise covariance matrix
-    mu_0 (np.ndarray): Initial state estimate
-    Sigma_0 (np.ndarray): Initial state covariance matrix
-
-    Returns:
-    tuple: A tuple containing:
-        - mu (np.ndarray): State estimates of shape (T, 2).
-        - Sigma (np.ndarray): State covariance matrices of shape (T, 2, 2).
-        - log_likelihood (float): Log-likelihood of the observations given the model.
-    """
     T = y.shape[0]
     dim_x = A.shape[0]
-    mu = np.zeros((T, dim_x))
-    Sigma = np.zeros((T, dim_x, dim_x))
+    x_est = np.zeros((T, dim_x))
+    Sigma_est = np.zeros((T, dim_x, dim_x))
     log_likelihood = 0
 
     # Initial values
@@ -47,10 +29,10 @@ def kalman_filter(y, A, Q, C, R, mu_0, Sigma_0):
             np.log(np.linalg.det(S)) + y_diff.T @ np.linalg.inv(S) @ y_diff + 2 * np.log(2 * np.pi)
         )
 
-        mu[t] = mu_t
-        Sigma[t] = Sigma_t
+        x_est[t] = mu_t
+        Sigma_est[t] = Sigma_t
 
-    return mu, Sigma, log_likelihood
+    return x_est, Sigma_est, log_likelihood
 
 def particle_filter(y, A, Q, C, R, mu_0, Sigma_0, N):
     T = y.shape[0]
@@ -86,10 +68,7 @@ def particle_filter(y, A, Q, C, R, mu_0, Sigma_0, N):
 def particle_filter_runs(y, A, Q, C, R, mu_0, Sigma_0, num_particles, num_runs):
     """Runs particle filter multiple times
     """
-    log_likelihoods = []
     with Pool() as p:
-        log_likelihood_pf = p.starmap(particle_filter, [(y, A, Q, C, R, mu_0, Sigma_0, num_particles)] * num_runs)
-    for run in log_likelihood_pf:
-        log_likelihoods.append(run[1])
-    return np.array(log_likelihoods)
+        pf_results = p.starmap(particle_filter, [(y, A, Q, C, R, mu_0, Sigma_0, num_particles)] * num_runs)
+    return pf_results
 

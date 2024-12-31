@@ -7,6 +7,7 @@
 \usepackage{amssymb}
 \usepackage{float}
 \usepackage[parfill]{parskip}
+\usepackage{minted}
 
 \usepackage[backend=biber, style=numeric-comp, sorting=none]{biblatex}
 \addbibresource{refs.bib}
@@ -25,16 +26,188 @@ The model will be a two-dimensional linear Gaussian state space model
 \begin{equation}
     \mathbf{x}_{t} = \mathbf{A} \mathbf{x}_{t-1} + \mathbf{w}_{t}
 \end{equation}
-where $\mathbf{x}_{t} \in \mathbb{R}^{2}$ is the state vector at time $t$, $\mathbf{A}$ is the state transition matrix, and $\mathbf{w}_{t} \sim \mathcal{N}(\mathbf{0}, \mathbf{Q})$ is the process noise at time $t$ with covariance matrix $\mathbf{Q}$.
+where $\mathbf{x}_{t}=(x_{0,t}, x_{1,t})^T$ is the state vector at time $t$, $$\mathbf{A}=\begin{pmatrix}
+    1.0 & 0.1 \\
+    0.0 & 1.0
+\end{pmatrix}$$ is the state transition matrix, and $\mathbf{w}_{t} \sim \mathcal{N}(0, \mathbf{Q})$ is the process noise at time $t$ with covariance matrix $\mathbf{Q}$.
+This model could represent an object moving randomly with position $x_{0,t}$ and velocity $x_{1,t}$. The position is then updated with timestep $0.1$, with noise.
 At each time $t$ the state is observed according to
 \begin{equation}
     \mathbf{y}_{t} = \mathbf{C} \mathbf{x}_{t} + \mathbf{v}_{t}
 \end{equation}
-where $\mathbf{y}_{t} \in \mathbb{R}^{2}$ is the observation vector at time $t$, $\mathbf{C}$ is the observation matrix, and $\mathbf{v}_{t} \sim \mathcal{N}(\mathbf{0}, \mathbf{R})$ is the observation noise at time $t$ with covariance matrix $\mathbf{R}$.
+where $\mathbf{y}_{t} \in \mathbb{R}^{2}$ is the observation vector at time $t$, $\mathbf{C}=\mathbf{I}$ is the observation matrix, and $\mathbf{v}_{t} \sim \mathcal{N}(0, \mathbf{R})$ is the observation noise at time $t$ with covariance matrix $\mathbf{R}$.
+The initial state $\mathbf{x}_{0}$ is drawn from a Gaussian distribution with mean $\mathbf{\mu}_{0}$.
+Figure \ref{fig:model_simulated} shows some simulated data from the model. The blue dashed line shows the true state of the model $\mathbf{x}_{t}$, and the yellow dots show the observations $\mathbf{y}_{t}$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figs/2d_simulated_data.jpg}
+    \caption{Simulated data from the model.}
+    \label{fig:model_simulated}
+\end{figure}
+
 \section{Kalman Filter}
 
-\section{Particle Filter}
+The Kalman filter is a recursive algorithm that estimates the state $\hat{\mathbf{x}}_{k}$ and covariance $\mathbf{P}_{k}$ of a linear Gaussian state space model.
+It assumes that the state and observation noise are Gaussian, and is optimal in this case in the sense that it minimises the mean squared error of the state estimate $\hat{\mathbf{x}}_{k}$.
 
-\section{Results}
+The implementation of the Kalman filter is shown in Listing \ref{lst:kalman_filter}. 
+The log marginal likelihood $l = \log p(\mathbf{y})$ is calculated using the update rule \cite{lutkepohl2013introduction}
+\begin{equation}
+    l_k = l_{k-1} - \frac{1}{2} \left( \log \left| \mathbf{S}_{k} \right| + \tilde{\mathbf{y}}_{k}^{T} \mathbf{S}_{k}^{-1} \tilde{\mathbf{y}} + 2 \log(2\pi) \right),
+\end{equation}
+where $\tilde{\mathbf{y}}_{k} = \mathbf{y}_{k} - \mathbf{C} \hat{\mathbf{x}}_{k|k-1}$ is the innovation, 
+and $\mathbf{S}_{k} = \mathbf{C} \mathbf{P}_{k|k-1} \mathbf{C}^{T} + \mathbf{R}$ is the innovation covariance. With the parameters found in the notebook, the log marginal likelihood is approximately $832.224$.
+
+Figure \ref{fig:kalman_filter} shows the Kalman filter applied to the simulated data. 
+The Kalman filter manages to estimate the true state of the model $\mathbf{x}_{t}$ well, despite the large observational noise.
+ 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figs/kalman_filter.jpg}
+    \caption{Kalman filter (green) applied to the simulated data, compared to the true state (dashed blue) and observations (yellow).}
+    \label{fig:kalman_filter}
+\end{figure}
+
+\section{Particle Filter}
+The particle filter is a Monte Carlo algorithm that approximates the state of a state space model. 
+In contrast to the Kalman filter, the particle filter can handle non-linear and non-Gaussian models.
+Figure \ref{fig:particle_filter_100} shows the particle filter with $100$ particles applied to the simulated data. 
+The particle filter manages to estimate the true state of the model fairly accurately, despite the limited number of particles used.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figs/particle_filter_100.jpg}
+    \caption{Particle filter (red) with $100$ particles applied to the simulated data, compared to the true state (dashed blue), the Kalman filter (green), and observations (yellow).}
+    \label{fig:particle_filter_100}
+\end{figure}
+
+If we increase the number of particles used, we can improve the accuracy of the particle filter. 
+Figure \ref{fig:particle_filter_1000} shows the particle filter with $1000$ particles applied to the simulated data.
+The particle filter estimate is now much closer to the Kalman filter estimate.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figs/particle_filter.jpg}
+    \caption{Particle filter (red) with $1000$ particles applied to the simulated data, compared to the true state (dashed blue), the Kalman filter (green), and observations (yellow).}
+    \label{fig:particle_filter_1000}
+\end{figure}
+
+Figure \ref{fig:box_plot_particles} shows box plots of the log marginal likelihood for differing numbers of particles. 
+We can see that the mean converges to the log marginal likelihood given by the Kalman filter, and the variance decreases as the number of particles increases.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figs/box_plot_particles.jpg}
+    \caption{Box plots of log marginal likelihood for differing numbers of particles.}
+    \label{fig:box_plot_particles}
+\end{figure}
+
+
+
+\section{Convergence}
+
+Figure \ref{fig:convergence_particles} shows how the mean log marginal likelihood of $50$ runs of the particle filter converges to the log marginal likelihood of the Kalman filter. This is expected as the Kalman filter gives the optimal estimate for a linear Gaussian model, and the particle filter is an unbiased estimator of the true state.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figs/convergence_particles.jpg}
+    \caption{Mean log marginal likelihood of the particle filter estimates converges to the Kalman filter log marginal likelihood as the number of particles increases. $50$ runs were used for each number of particles.}
+    \label{fig:convergence_particles}
+\end{figure}
+
+Figure \ref{fig:loglog_particles} shows a log-log plot of the $L^2$ error of the mean particle filter estimate comapred to the Kalman filter esimate. 
+The order of convergence is approximately $0.82$.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figs/loglog_particles.jpg}
+    \label{fig:loglog_particles}
+\end{figure}
+
+\newpage
+\printbibliography
+
+\newpage
+\appendix
+
+\section{Code}
+
+\begin{listing}[H]
+\begin{minted}[fontsize=\scriptsize]{python3}
+    import numpy as np
+    
+    def kalman_filter(y, A, Q, C, R, mu_0, Sigma_0):
+        T = y.shape[0]
+        dim_x = A.shape[0]
+        mu = np.zeros((T, dim_x))
+        Sigma = np.zeros((T, dim_x, dim_x))
+        log_likelihood = 0
+    
+        # Initial values
+        mu_t = mu_0
+        Sigma_t = Sigma_0
+    
+        for t in range(T):
+            # Prediction step
+            mu_pred = A @ mu_t
+            Sigma_pred = A @ Sigma_t @ A.T + Q
+    
+            # Update step
+            y_diff = y[t] - C @ mu_pred  # Innovation
+            S = C @ Sigma_pred @ C.T + R  # Innovation covariance
+            K = Sigma_pred @ C.T @ np.linalg.inv(S)  # Kalman gain
+            mu_t = mu_pred + K @ y_diff  # State estimate
+            Sigma_t = Sigma_pred - K @ C @ Sigma_pred  # State covariance
+    
+            # Compute log-likelihood
+            log_likelihood += -0.5 * (
+                np.log(np.linalg.det(S)) + y_diff.T @ np.linalg.inv(S) @ y_diff + 2 * np.log(2 * np.pi)
+            )
+    
+            mu[t] = mu_t
+            Sigma[t] = Sigma_t
+    
+        return mu, Sigma, log_likelihood
+\end{minted}
+\caption{Kalman filter implementation.}
+\label{lst:kalman_filter}
+\end{listing}
+
+\begin{listing}
+\begin{minted}[fontsize=\scriptsize]{python}
+    def particle_filter(y, A, Q, C, R, mu_0, Sigma_0, N):
+    T = y.shape[0]
+    particles = np.random.multivariate_normal(mu_0, Sigma_0, size=N)
+    weights = np.ones(N) / N
+
+    x_est = np.zeros((T, 2))
+    log_likelihood = 0
+
+    for t in range(T):
+        # Evolve particles according to state transition model
+        particles_pred = (A @ particles.T).T + np.random.multivariate_normal(np.zeros(2), Q, size=N)
+
+        # Compute weights based on observation likelihood
+        y_diff = y[t] - np.dot(particles_pred, C.T)
+        likelihoods = np.exp(-0.5 * np.sum(y_diff @ np.linalg.inv(R) * y_diff, axis=1))
+        likelihoods /= np.sqrt((2 * np.pi)**2 * np.linalg.det(R))
+
+        weights *= likelihoods
+        weights /= np.sum(weights)  # normalise weights
+
+        log_likelihood += np.log(np.sum(likelihoods) / N)
+
+        # Estimate state
+        x_est[t] = np.average(particles_pred, axis=0, weights=weights)
+
+        # Resample particles
+        particles = particles_pred[np.random.choice(N, N, p=weights)]
+        weights = np.ones(N) / N
+
+    return x_est, log_likelihood
+\end{minted}
+\caption{Particle filter implementation.}
+\end{listing}
 
 \end{document}
